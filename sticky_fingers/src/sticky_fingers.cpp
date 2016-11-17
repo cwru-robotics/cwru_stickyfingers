@@ -7,28 +7,79 @@
 #include <sticky_fingers/StickyControl.h>
 
 namespace gazebo{
-	class StickyFingers : public gazebo::SensorPlugin{
+	class StickyFingers : public gazebo::ModelPlugin{
 		private:
 
 			//State information
 			bool sticky;
 			physics::LinkPtr held_object;
 
-			tf::Transform ho_transform;
-
 			double max_mass;
 
 			//A stack of objects relating to the sticky element-
 			//	the world containing it, the link containing it,
 			//	and finally the sensor object itself.
-			sensors::ContactSensorPtr finger_sensor;
+			physics::ModelPtr finger_model;
 			physics::LinkPtr finger_link;
 			physics::WorldPtr finger_world;
+			std::string finger_name;
 			
 			//The joint that will connect to the held object
 			physics::JointPtr fixedJoint;
-
+			
+			
+			//Something to do with contacts or something.
+			transport::SubscriberPtr contact_sub;
+			transport::NodePtr contact_node;
+			//std::mutex mutex;
+			
 			event::ConnectionPtr updateConnection;
+			
+			void ContactCB(ConstContactsPtr &msg){
+				if(this->sticky && this->held_object == NULL){
+					for(int i = 0; i < msg->contact_size(); i++){
+						physics::LinkPtr candidate = NULL;
+						if(strcmp(msg->contact(i).collision1().c_str(), this->finger_name.c_str())){
+							candidate =
+								boost::dynamic_pointer_cast<physics::Collision>(
+									this->finger_world->GetEntity(msg->contact(i).collision1())
+								)
+							->GetLink();
+
+						}
+						if(strcmp(msg->contact(i).collision2().c_str(), this->finger_name.c_str())){
+							candidate =
+								boost::dynamic_pointer_cast<physics::Collision>(
+									this->finger_world->GetEntity(msg->contact(i).collision1())
+								)
+							->GetLink();
+						}
+						if(candidate != NULL){
+							if(!candidate->IsStatic()){
+								if(candidate->GetInertial()->GetMass() <= this->max_mass){//Ignore heavy objects
+									ROS_INFO("Finger grabbing link %s.", candidate->GetName().c_str());
+
+									this->held_object = candidate;
+									
+									this->finger_link->SetCollideMode("ghost");
+									this->held_object->SetCollideMode("ghost");
+									
+									//Attach the joint
+									this->fixedJoint->Load(this->finger_link, held_object, math::Pose());
+									//The joint limits have to be set after attachment:
+									// http://answers.gazebosim.org/question/2824/error-when-setting-dynamically-created-joints-axis-in-gazebo-180/
+									this->fixedJoint->SetAxis(0, gazebo::math::Vector3(0.0, 0.0, 1.0));
+									this->fixedJoint->SetLowStop(0, gazebo::math::Angle(0.0));
+									this->fixedJoint->SetHighStop(0, gazebo::math::Angle(0.0));
+									this->fixedJoint->Init();
+
+									break;
+								}
+							}
+						}
+					}
+				}
+			}
 
 			//ROS communication
 			ros::NodeHandle nh;
@@ -59,96 +110,66 @@ namespace gazebo{
 			}
 
 		public:
-			void Load(sensors::SensorPtr sensor, sdf::ElementPtr sdf){
+			void Load(physics::ModelPtr mod, sdf::ElementPtr sdf){
 				this->sticky = false;
 				this->held_object = NULL;
-
-				this->max_mass = sdf->GetElement("capacity")->Get<double>();
 				
 				//Get things that require effort to look up and can be kept persistant.
-				this->finger_sensor = boost::dynamic_pointer_cast<sensors::ContactSensor>(sensor);
-				this->finger_world = physics::get_world(finger_sensor->GetWorldName());
+				this->max_mass = sdf->GetElement("capacity")->Get<double>();
+				this->finger_name = sdf->GetElement("link")->Get<std::string>();
+				this->finger_model = mod;
+				this->finger_world = finger_model->GetWorld();
 				this->finger_link = boost::dynamic_pointer_cast<physics::Link>(
-					this->finger_world->GetEntity(finger_sensor->GetParentName())
+					this->finger_world->GetEntity(this->finger_name)
 				);
 				
 				//Initialize the joint.
-				//We use a prismatic joint that will have limits of (0,0) because fixed joints are not supported in this version of Gazebo
-				this->fixedJoint = this->finger_world->GetPhysicsEngine()->CreateJoint("prismatic", this->finger_link->GetModel());
-				this->fixedJoint->SetName(this->finger_link->GetModel()->GetName() + "__sticking_joint__");
-
+				//We use a prismatic joint that will have limits of (0,0) because fixed joints are not natively supported in this version of Gazebo
+				this->fixedJoint = this->finger_world->GetPhysicsEngine()->CreateJoint("prismatic", this->finger_model);
+				this->fixedJoint->SetName(this->finger_model->GetName() + "__sticking_joint__");
+				
+				//Pull out all possible collision objects from the link
+				unsigned int ccount = this->finger_link->GetChildCount();
+				std::map<std::string, physics::CollisionPtr> collisions;
+				for(unsigned int i = 0; i < ccount; i++){
+					 physics::CollisionPtr ccan = this->finger_link->GetCollision(i);
+					 //What even is the point of this check? It SEEMS to look for the same collision appearing twice, but how would that even happen?
+					 /*std::map<std::string, physics::CollisionPtr>::iterator collIter = this->dataPtr->collisions.find(collision->GetScopedName());
+					 if (collIter != this->dataPtr->collisions.end()) continue;*/
+					collisions[ccan->GetScopedName()] = ccan;
+				}
+				
+				//Create a listener on those contacts
+				this->contact_node = transport::NodePtr(new transport::Node());
+				this->contact_node->Init(this->finger_world->GetName());
+				if (!collisions.empty()){
+					// Create a filter to receive collision information
+					physics::ContactManager * mgr = this->finger_world->GetPhysicsEngine()->GetContactManager();
+					std::string topic = mgr->CreateFilter(finger_name, collisions);
+					if (!this->contact_sub){
+						this->contact_sub = this->contact_node->Subscribe(topic, &StickyFingers::ContactCB, this);
+					}
+				}
+				
 				//Set up ROS communication
-				std::string fingername = finger_sensor->GetName();
 				int a = 0;//No, it will NOT just accept an argument size of 0 without shenanigans. Annoying.
-				ros::init(a, (char **) NULL, fingername+"_node");
+				ros::init(a, (char **) NULL, finger_name + "_node");
 				service = this->nh.advertiseService(
-					"sticky_finger/" + fingername,
+					"sticky_finger/" + this->finger_link->GetName(),
 					&StickyFingers::ControlCallback,
 					this
 				);
 				ROS_INFO(
 					"Sticky finger node %s listening on topic [%s].",
-					(fingername+"_node").c_str(),
-					("sticky_finger/" + fingername).c_str()
+					(finger_name+"_node").c_str(),
+					("sticky_finger/" + this->finger_link->GetName()).c_str()
 				);
-
-				//Activate the sensor.
-				this->updateConnection = event::Events::ConnectWorldUpdateBegin(
-					boost::bind(&StickyFingers::OnUpdate, this, _1)
-				);
-				this->finger_sensor->SetActive(true);
+				
+				this->updateConnection = event::Events::ConnectWorldUpdateEnd(boost::bind(&StickyFingers::OnUpdate, this));
 			}
 
-			void OnUpdate(const common::UpdateInfo & info){
-				if(this->sticky){//We don't really need to do anything at all unless we're in sticky mode...
-					
-					if(this->held_object == NULL){//Prospecting mode:
-
-						msgs::Contacts allcon = this->finger_sensor->GetContacts();
-
-						for(unsigned int i = 0; i < allcon.contact_size(); i++){
-
-							//There seems to be no rhyme or reason as to which name Gazebo will register in the first slot.
-							std::string cname;
-							if(finger_sensor->GetCollisionName(0).compare(allcon.contact(i).collision1()) != 0){
-								cname = allcon.contact(i).collision1();
-							}
-							else{
-								cname = allcon.contact(i).collision2();
-							}
-
-							physics::LinkPtr candidate =
-								boost::dynamic_pointer_cast<physics::Collision>(
-									finger_world->GetEntity(cname)
-								)
-							->GetLink();
-
-							if(!(candidate->GetModel()->IsStatic())){//Ignore static objects
-								if(candidate->GetInertial()->GetMass() <= this->max_mass){//Ignore heavy objects
-									ROS_INFO("Finger grabbing link %s.", candidate->GetName().c_str());
-
-									this->held_object = candidate;
-									
-									this->finger_link->SetCollideMode("ghost");
-									this->held_object->SetCollideMode("ghost");
-									
-									//Attach the joint
-									this->fixedJoint->Load(this->finger_link, held_object, math::Pose());
-									//The joint limits have to be set after attachment:
-									// http://answers.gazebosim.org/question/2824/error-when-setting-dynamically-created-joints-axis-in-gazebo-180/
-									this->fixedJoint->SetAxis(0, gazebo::math::Vector3(0.0, 0.0, 1.0));
-									this->fixedJoint->SetLowStop(0, gazebo::math::Angle(0.0));
-									this->fixedJoint->SetHighStop(0, gazebo::math::Angle(0.0));
-									this->fixedJoint->Init();
-
-									break;
-								}
-							}
-						}
-					}
-				}
-			}
+			void OnUpdate(){}
 	};
 
-	GZ_REGISTER_SENSOR_PLUGIN(StickyFingers)
+	GZ_REGISTER_MODEL_PLUGIN(StickyFingers)
 }

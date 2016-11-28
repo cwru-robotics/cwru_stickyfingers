@@ -17,14 +17,6 @@ link_directories(${GAZEBO_LIBRARY_DIRS})
 find_package(Boost REQUIRED COMPONENTS system thread)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-add_service_files(
-	FILES StickyControl.srv
-)
-
-generate_messages(
-	DEPENDENCIES
-	std_msgs
-)
 
 catkin_package(
   DEPENDS 

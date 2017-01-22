@@ -110,6 +110,7 @@ namespace gazebo{
 
 		public:
 			void Load(physics::ModelPtr mod, sdf::ElementPtr sdf){
+				printf("Loaded SF.");
 				this->sticky = false;
 				this->held_object = NULL;
 				

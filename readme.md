@@ -1,5 +1,7 @@
 #StickyFingers Plugin#
 
+[![Build Status](https://travis-ci.org/cwru-robotics/cwru_stickyfingers.svg?branch=master)](https://travis-ci.org/cwru-robotics/cwru_stickyfingers)
+
 **What Is StickyFingers?**
 	StickyFingers is a ROS plugin meant to assist in grasping objects or representing a magnetic, suction, or adhesive gripping element. It makes one link in a Gazebo model “sticky”- when enabled by a ROS message, if that link comes into contact with an object that object will become “stuck” to the link and follow its position until the disable message is sent.
 	

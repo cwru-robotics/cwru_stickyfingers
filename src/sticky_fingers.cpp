@@ -38,7 +38,7 @@ namespace gazebo{
 				if(this->sticky && this->held_object == NULL){
 					for(int i = 0; i < msg->contact_size(); i++){
 						physics::LinkPtr candidate = NULL;
-						if(strcmp(msg->contact(i).collision1().c_str(), this->finger_name.c_str())){
+						if(strcmp(msg->contact(i).collision1().c_str(), this->finger_name.c_str()) != 0){
 							candidate =
 								boost::dynamic_pointer_cast<physics::Collision>(
 									this->finger_world->GetEntity(msg->contact(i).collision1())
@@ -46,10 +46,10 @@ namespace gazebo{
 							->GetLink();
 
 						}
-						if(strcmp(msg->contact(i).collision2().c_str(), this->finger_name.c_str())){
+						else if(strcmp(msg->contact(i).collision2().c_str(), this->finger_name.c_str()) != 0){
 							candidate =
 								boost::dynamic_pointer_cast<physics::Collision>(
-									this->finger_world->GetEntity(msg->contact(i).collision1())
+									this->finger_world->GetEntity(msg->contact(i).collision2())
 								)
 							->GetLink();
 						}
@@ -90,10 +90,12 @@ namespace gazebo{
 				if(this->sticky && !request.data){//We are sticky and should stop being such.
 					this->sticky = false;//Stop being sticky.
 					if(this->held_object != NULL){
-						this->held_object->SetCollideMode("all");
+						//this->held_object->SetCollideMode("all");
 					}
-					this->finger_link->SetCollideMode("all");//Resume collisionality
+					//this->finger_link->SetCollideMode("all");//Resume collisionality
 					this->fixedJoint->Detach();
+					this->held_object->SetLinearVel(math::Vector3(0.0, 0.0, 0.0));
+					this->held_object->SetAngularVel(math::Vector3(0.0, 0.0, 0.0));
 					this->held_object = NULL;//Drop our held object (if any)
 					response.success = false;//Report what we just did.
 					return true;

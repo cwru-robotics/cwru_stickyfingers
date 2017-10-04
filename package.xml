@@ -5,12 +5,12 @@
 	<description>Sticky gripper for holding objects.</description>
   
 	<!-- One maintainer tag required, multiple allowed, one person per tag -->
-	<maintainer email="tes77@case.edu">Tom</maintainer>
+	<maintainer email="tes77@case.edu">Tom Shkurti</maintainer>
 
 	<!-- One license tag required, multiple allowed, one license per tag -->
 	<!-- Commonly used license strings: -->
 	<!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
-	<license>None</license>
+	<license>MIT</license>
 
 	<!-- Url tags are optional, but mutiple are allowed, one per tag -->
 	<!-- Optional attribute type can be: website, bugtracker, or repository -->

@@ -4,6 +4,7 @@
 #include <tf/tf.h>
 
 #include <std_srvs/SetBool.h>
+#include <std_msgs/String.h>
 
 namespace gazebo{
 	class StickyFingers : public gazebo::ModelPlugin{
@@ -62,6 +63,13 @@ namespace gazebo{
 							if(!candidate->IsStatic()){
 								if(candidate->GetInertial()->GetMass() <= this->max_mass){//Ignore heavy objects
 									ROS_INFO("Finger grabbing link %s.", candidate->GetName().c_str());
+									std_msgs::String s;
+									s.data=candidate->GetName();
+									this->grab_pub.publish(s);
+									this->nh.setParam(
+										"sticky_finger/" + this->finger_link->GetName() + "/grabbed_object",
+										candidate->GetName()
+									);
 
 									this->held_object = candidate;
 									
@@ -88,6 +96,7 @@ namespace gazebo{
 			//ROS communication
 			ros::NodeHandle nh;
 			ros::ServiceServer service;
+			ros::Publisher grab_pub;
 			bool ControlCallback(
 				std_srvs::SetBoolRequest& request,
 				std_srvs::SetBoolResponse& response
@@ -103,6 +112,13 @@ namespace gazebo{
 					this->held_object->SetAngularVel(math::Vector3(0.0, 0.0, 0.0));
 					this->held_object = NULL;//Drop our held object (if any)
 					response.success = false;//Report what we just did.
+					std_msgs::String s;
+					s.data="";
+					this->grab_pub.publish(s);
+					this->nh.setParam(
+						"sticky_finger/" + this->finger_link->GetName() + "/grabbed_object",
+						""
+					);
 					return true;
 				}
 				else if(!this->sticky && request.data){//We are not sticky and should be sticky...
@@ -165,6 +181,14 @@ namespace gazebo{
 					"sticky_finger/" + this->finger_link->GetName(),
 					&StickyFingers::ControlCallback,
 					this
+				);
+				this->grab_pub = this->nh.advertise<std_msgs::String>(
+					"sticky_finger/" + this->finger_link->GetName() + "/grab_events",
+					1, true
+				);
+				this->nh.setParam(
+					"sticky_finger/" + this->finger_link->GetName() + "/grabbed_object",
+					""
 				);
 				ROS_INFO(
 					"Sticky finger node %s listening on topic [%s].",

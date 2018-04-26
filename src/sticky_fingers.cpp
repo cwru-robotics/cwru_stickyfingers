@@ -38,7 +38,10 @@ namespace gazebo{
 				if(this->sticky && this->held_object == NULL){
 					for(int i = 0; i < msg->contact_size(); i++){
 						physics::LinkPtr candidate = NULL;
-						if(strcmp(msg->contact(i).collision1().c_str(), this->finger_name.c_str()) != 0){
+						ROS_ERROR("1 is %s, 2 is %s, fname is %s", msg->contact(i).collision1().c_str(), msg->contact(i).collision2().c_str(), this->finger_name.c_str());
+						if(msg->contact(i).collision1().find(this->finger_name) == std::string::npos){
+						//if(strcmp(msg->contact(i).collision1().c_str(), ((this->finger_name) + "_collision_collision").c_str()) != 0){
+							ROS_ERROR("Condition 1.");
 							candidate =
 								boost::dynamic_pointer_cast<physics::Collision>(
 									this->finger_world->GetEntity(msg->contact(i).collision1())
@@ -46,7 +49,9 @@ namespace gazebo{
 							->GetLink();
 
 						}
-						else if(strcmp(msg->contact(i).collision2().c_str(), this->finger_name.c_str()) != 0){
+						else if(msg->contact(i).collision2().find(this->finger_name) == std::string::npos){
+						//else if(strcmp(msg->contact(i).collision2().c_str(), ((this->finger_name) + "_collision_collision").c_str()) != 0){
+							ROS_ERROR("Condition 2.");
 							candidate =
 								boost::dynamic_pointer_cast<physics::Collision>(
 									this->finger_world->GetEntity(msg->contact(i).collision2())

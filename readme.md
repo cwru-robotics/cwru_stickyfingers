@@ -9,9 +9,9 @@ StickyFingers is a ROS plugin meant to assist in grasping objects or representin
 	
 ### Employing StickyFingers ###
 
-To add a StickyFingers plugin to a link in your robot, add the following material to the *model* definition containing the link you want to make sticky:<pre><code>&lt;plugin name="<strong>[NAME]</strong>" filename="libsticky_fingers.so">
+To add a StickyFingers plugin to a link in your robot, add the following material to the *model* definition containing the link you want to make sticky:<pre><code>&lt;plugin name="<strong>[NAME 1]</strong>" filename="libsticky_fingers.so">
 &nbsp;&nbsp;&nbsp;&nbsp;&lt;capacity><strong>[##]</strong>&lt;/capacity>
-&nbsp;&nbsp;&nbsp;&nbsp;&lt;link><strong>[LINK]</strong>&lt;/link>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;link><strong>[LINK_NAME]</strong>&lt;/link>
 &lt;/plugin></code></pre>
 **[NAME 1]** can be anything.
 **[##]** is the maximum mass the gripper should be able to lift- anything above this value, and any static objects, will not attach to the gripper.
@@ -21,14 +21,14 @@ An example of this structure can be found in `world/blocks_on_table.world`.
 
 Note that in a URDF file, like any plugin definition you will need to include the stickyfingers plugin in *unnamed* Gazebo tags, in the main robot definition (and inside the macro, if one is used) outside of all of the links:<pre><code>&lt;robot name="some_name" xmlns:xacro="<http://www.ros.org/wiki/xacro>">
 &nbsp;&nbsp;&nbsp;&nbsp;&lt;xacro:macro name="something" params="something_else">
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;link name="<strong>[LINK]</strong>">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;link name="<strong>[LINK_NAME]</strong>">
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;... 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/link>
 		
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;gazebo>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;plugin name="<strong>[NAME]</strong>" filename="libsticky_fingers.so">
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;plugin name="<strong>[NAME 1]</strong>" filename="libsticky_fingers.so">
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;capacity><strong>[##]</strong>&lt;/capacity>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;link><strong>parent::other_parent::[LINK]</strong>&lt;/link>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;link><strong>parent::other_parent::[LINK_NAME]</strong>&lt;/link>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/plugin>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/gazebo>
 &nbsp;&nbsp;&nbsp;&nbsp;&lt;/xacro:macro>
@@ -37,7 +37,7 @@ Note that in a URDF file, like any plugin definition you will need to include th
 
 On startup, every StickyFingers link offers a <a href="http://wiki.ros.org/Services">ROS service</a> that communicates with <a href="http://docs.ros.org/jade/api/std_srvs/html/srv/SetBool.html">std_srvs/SetBool</a> services.
 
-The messages are on topics named <code>sticky_finger/<strong>[NAME]</strong></code>- for instance, if we had a finger named `ftip_sticky`, we would call the action server `sticky_finger/ftip_sticky`. The console will display the messages used by each sticky finger in the simulation whenever Gazebo starts up.
+The messages are on topics named <code>sticky_finger/<strong>[NAME]</strong></code>- for instance, if we had a finger named `ftip_sticky`, we would call the service `sticky_finger/ftip_sticky`. The console will display the messages used by each sticky finger in the simulation whenever Gazebo starts up.
 
 A `True` value will enable the finger, a `False` value will disable a finger and cause it to drop whatever it is holding.
 A stand-alone executable to produce these messages is included as `finger_control_dummy_node`.

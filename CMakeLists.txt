@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(sticky_fingers)
+project(cwru_sticky_fingers)
 
 find_package(catkin REQUIRED COMPONENTS 
   roscpp 

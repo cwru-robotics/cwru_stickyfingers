@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-	<name>sticky_fingers</name>
+	<name>cwru_sticky_fingers</name>
 	<version>1.0.0</version>
 	<description>Sticky gripper for holding objects.</description>
   

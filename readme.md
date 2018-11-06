@@ -37,7 +37,7 @@ Note that in a URDF file, like any plugin definition you will need to include th
 
 On startup, every StickyFingers link offers a <a href="http://wiki.ros.org/Services">ROS service</a> that communicates with <a href="http://docs.ros.org/jade/api/std_srvs/html/srv/SetBool.html">std_srvs/SetBool</a> services.
 
-The messages are on topics named <code>sticky_finger/<strong>[NAME]</strong></code>- for instance, if we had a finger named `ftip_sticky`, we would call the service `sticky_finger/ftip_sticky`. The console will display the messages used by each sticky finger in the simulation whenever Gazebo starts up.
+The messages are on topics named <code>sticky_finger/<strong>[NAME 1]</strong></code>- for instance, if we had a finger named `ftip_sticky`, we would call the service `sticky_finger/ftip_sticky`. The console will display the messages used by each sticky finger in the simulation whenever Gazebo starts up.
 
 A `True` value will enable the finger, a `False` value will disable a finger and cause it to drop whatever it is holding.
 A stand-alone executable to produce these messages is included as `finger_control_dummy_node`.

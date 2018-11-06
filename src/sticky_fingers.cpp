@@ -104,10 +104,8 @@ namespace gazebo{
 				if(this->sticky && !request.data){//We are sticky and should stop being such.
 					this->sticky = false;//Stop being sticky.
 					if(this->held_object != NULL){
-						//this->held_object->SetCollideMode("all");
-					}
-					//this->finger_link->SetCollideMode("all");//Resume collisionality
-					this->fixedJoint->Detach();
+						this->held_object->SetCollideMode("all");
+                                            this->fixedJoint->Detach();
 					this->held_object->SetLinearVel(math::Vector3(0.0, 0.0, 0.0));
 					this->held_object->SetAngularVel(math::Vector3(0.0, 0.0, 0.0));
 					this->held_object = NULL;//Drop our held object (if any)
@@ -119,6 +117,8 @@ namespace gazebo{
 						"sticky_finger/" + this->finger_link->GetName() + "/grabbed_object",
 						""
 					);
+					}
+					//this->finger_link->SetCollideMode("all");//Resume collisionality
 					return true;
 				}
 				else if(!this->sticky && request.data){//We are not sticky and should be sticky...

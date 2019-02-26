@@ -45,7 +45,7 @@ namespace gazebo{
 							ROS_ERROR("Condition 1.");
 							candidate =
 								boost::dynamic_pointer_cast<physics::Collision>(
-									this->finger_world->GetEntity(msg->contact(i).collision1())
+									this->finger_world->BaseByName(msg->contact(i).collision1())
 								)
 							->GetLink();
 
@@ -55,13 +55,13 @@ namespace gazebo{
 							ROS_ERROR("Condition 2.");
 							candidate =
 								boost::dynamic_pointer_cast<physics::Collision>(
-									this->finger_world->GetEntity(msg->contact(i).collision2())
+									this->finger_world->BaseByName(msg->contact(i).collision2())
 								)
 							->GetLink();
 						}
 						if(candidate != NULL){
 							if(!candidate->IsStatic()){
-								if(candidate->GetInertial()->GetMass() <= this->max_mass){//Ignore heavy objects
+								if(candidate->GetInertial()->Mass() <= this->max_mass){//Ignore heavy objects
 									ROS_INFO("Finger grabbing link %s.", candidate->GetName().c_str());
 									std_msgs::String s;
 									s.data=candidate->GetName();
@@ -77,12 +77,12 @@ namespace gazebo{
 									this->held_object->SetCollideMode("ghost");
 									
 									//Attach the joint
-									this->fixedJoint->Load(this->finger_link, held_object, math::Pose());
+									this->fixedJoint->Load(this->finger_link, held_object, ignition::math::Pose3d());
 									//The joint limits have to be set after attachment:
 									// http://answers.gazebosim.org/question/2824/error-when-setting-dynamically-created-joints-axis-in-gazebo-180/
-									this->fixedJoint->SetAxis(0, gazebo::math::Vector3(0.0, 0.0, 1.0));
-									this->fixedJoint->SetLowStop(0, gazebo::math::Angle(0.0));
-									this->fixedJoint->SetHighStop(0, gazebo::math::Angle(0.0));
+									this->fixedJoint->SetAxis(0, ignition::math::Vector3<double>(0.0, 0.0, 1.0));
+									this->fixedJoint->SetLowerLimit(0, 0.0);
+									this->fixedJoint->SetUpperLimit(0, 0.0);
 									this->fixedJoint->Init();
 
 									break;
@@ -106,8 +106,8 @@ namespace gazebo{
 					if(this->held_object != NULL){
 						this->held_object->SetCollideMode("all");
                                             this->fixedJoint->Detach();
-					this->held_object->SetLinearVel(math::Vector3(0.0, 0.0, 0.0));
-					this->held_object->SetAngularVel(math::Vector3(0.0, 0.0, 0.0));
+					this->held_object->SetLinearVel(ignition::math::Vector3<double>(0.0, 0.0, 0.0));
+					this->held_object->SetAngularVel(ignition::math::Vector3<double>(0.0, 0.0, 0.0));
 					this->held_object = NULL;//Drop our held object (if any)
 					response.success = false;//Report what we just did.
 					std_msgs::String s;
@@ -143,12 +143,12 @@ namespace gazebo{
 				this->finger_model = mod;
 				this->finger_world = finger_model->GetWorld();
 				this->finger_link = boost::dynamic_pointer_cast<physics::Link>(
-					this->finger_world->GetEntity(this->finger_name)
+					this->finger_world->BaseByName(this->finger_name)
 				);
 				
 				//Initialize the joint.
 				//We use a prismatic joint that will have limits of (0,0) because fixed joints are not natively supported in this version of Gazebo
-				this->fixedJoint = this->finger_world->GetPhysicsEngine()->CreateJoint("prismatic", this->finger_model);
+				this->fixedJoint = this->finger_world->Physics()->CreateJoint("prismatic", this->finger_model);
 				this->fixedJoint->SetName(this->finger_model->GetName() + "__sticking_joint__");
 				
 				//Pull out all possible collision objects from the link
@@ -164,10 +164,10 @@ namespace gazebo{
 				
 				//Create a listener on those contacts
 				this->contact_node = transport::NodePtr(new transport::Node());
-				this->contact_node->Init(this->finger_world->GetName());
+				this->contact_node->Init(this->finger_world->Name());
 				if (!collisions.empty()){
 					// Create a filter to receive collision information
-					physics::ContactManager * mgr = this->finger_world->GetPhysicsEngine()->GetContactManager();
+					physics::ContactManager * mgr = this->finger_world->Physics()->GetContactManager();
 					std::string topic = mgr->CreateFilter(finger_name, collisions);
 					if (!this->contact_sub){
 						this->contact_sub = this->contact_node->Subscribe(topic, &StickyFingers::ContactCB, this);
